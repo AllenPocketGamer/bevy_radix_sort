@@ -2,5 +2,11 @@
 name = "bevy_radix_sort"
 version = "0.1.0"
 edition = "2024"
+license = "MIT OR Apache-2.0"
+authors = ["AllenPocketGamer <allenpocketwork@gmail.com>"]
+description = "A GPU-based radix sort plugin for Bevy"
+repository = "https://github.com/AllenPocketGamer/bevy_radix_sort"
+readme = "README.md"
 
 [dependencies]
+bevy = "0.15"
