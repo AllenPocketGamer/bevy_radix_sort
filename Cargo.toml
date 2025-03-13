@@ -6,8 +6,12 @@ authors = ["AllenPocketGamer <allenpocketwork@gmail.com>"]
 description = "A GPU-based radix sort plugin for Bevy"
 repository = "https://github.com/AllenPocketGamer/bevy_radix_sort"
 readme = "README.md"
+license = "MIT OR Apache-2.0"
 
 [dependencies]
 bevy = "0.15"
-bytemuck = "1.7.0"
+bytemuck = { version = "1.7.0", features = ["derive"] }
 log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
+
+[features]
+default = []
