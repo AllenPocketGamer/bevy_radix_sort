@@ -9,12 +9,9 @@ fn main() {
         .run();
 }
 
-// 设置UI系统
 fn show_subgroup_size(mut commands: Commands, subgroup_size: Res<SubgroupSize>) {
-    // 相机
     commands.spawn(Camera2d::default());
 
-    // UI节点
     commands
         .spawn((Node {
             width: Val::Percent(100.0),
@@ -24,7 +21,6 @@ fn show_subgroup_size(mut commands: Commands, subgroup_size: Res<SubgroupSize>) 
             ..default()
         },))
         .with_children(|parent| {
-            // 显示subgroup_size的文本
             parent.spawn((
                 Text::new(format!("subgroup_size: {}", subgroup_size.0)),
                 TextFont {
