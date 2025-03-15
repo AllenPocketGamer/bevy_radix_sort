@@ -42,6 +42,21 @@ For accurate performance analysis, I recommend using GPU-specific profiling tool
 
 These tools provide detailed insights into GPU execution times, memory usage, and potential bottlenecks that simple timing measurements cannot capture.
 
+### Performance Results
+
+Below are benchmark results from testing on an NVIDIA RTX 4070 Ti Super:
+
+![RTX 4070 Ti Super Benchmark](./benchmark.png)
+
+| Number of Key-Value Pairs | Execution Time (ms) |
+|---------------------------|---------------------|
+| 10,000                    | 0.12                |
+| 100,000                   | 0.19                |
+| 1,000,000                 | 0.43                |
+| 10,000,000                | 2.30                |
+
+*Note: Performance may vary based on system configuration, driver version, and concurrent GPU workloads.*
+
 ## Usage
 
 Check out the [example implementation](./examples/simple_gpu_sort.rs) to see how to integrate the radix sort into your Bevy application.
