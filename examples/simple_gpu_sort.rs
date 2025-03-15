@@ -11,7 +11,7 @@ use bevy::{
         storage::GpuShaderStorageBuffer,
     },
 };
-use bevy_egui::{egui, EguiContexts, EguiPlugin};
+use bevy_egui::{EguiContexts, EguiPlugin, egui};
 use bevy_radix_sort::{
     EVE_GLOBAL_KEYS_STORAGE_BUFFER_HANDLE, EVE_GLOBAL_VALS_STORAGE_BUFFER_HANDLE,
     GetSubgroupSizePlugin, LoadState, RadixSortBindGroup, RadixSortPipeline, RadixSortPlugin,
@@ -48,8 +48,7 @@ pub struct SortCommand {
 pub struct InputState {
     pub input_value: String,
     pub last_sorted_length: Option<usize>,
-    pub is_sorting: bool,
-    pub sort_time_ms: Option<f32>,
+    pub continuous_generation: bool,
 }
 
 #[derive(Debug)]
@@ -65,11 +64,15 @@ impl Plugin for SimpleGpuSortPlugin {
             })
             .init_resource::<SortCommand>()
             .init_resource::<InputState>()
-            .add_systems(Update, (disable_requested, ui_system, handle_sort_event).chain());
+            .add_systems(
+                Update,
+                (disable_requested, ui_system, handle_sort_event).chain(),
+            );
 
         let render_app = app.sub_app_mut(RenderApp);
 
         render_app
+            .init_resource::<InputState>()
             .add_systems(ExtractSchedule, extract_sort_command)
             .add_systems(
                 Render,
@@ -90,7 +93,10 @@ impl Plugin for SimpleGpuSortPlugin {
 
         let mut graph = render_app.world_mut().resource_mut::<RenderGraph>();
         graph.add_node(SimpleGpuSortNodeLabel, SimpleGpuSortNode::default());
-        graph.add_node_edge(bevy::render::graph::CameraDriverLabel, SimpleGpuSortNodeLabel);
+        graph.add_node_edge(
+            bevy::render::graph::CameraDriverLabel,
+            SimpleGpuSortNodeLabel,
+        );
     }
 }
 
@@ -99,56 +105,29 @@ fn ui_system(
     mut contexts: EguiContexts,
     mut input_state: ResMut<InputState>,
     mut sort_events: EventWriter<SortEvent>,
-    sort_command: Res<SortCommand>,
 ) {
-    // Update sorting status
-    input_state.is_sorting = sort_command.requested;
-    
     egui::Window::new("Radix Sort Control")
         .default_pos([100.0, 100.0])
         .default_size([300.0, 250.0])
         .show(contexts.ctx_mut(), |ui| {
             ui.heading("Bevy Radix Sort");
-            
-            ui.add_space(10.0);
-            
-            // Status indicator
-            if input_state.is_sorting {
-                ui.horizontal(|ui| {
-                    ui.label("Status:");
-                    ui.colored_label(egui::Color32::YELLOW, "Sorting...");
-                });
-            } else if let Some(length) = input_state.last_sorted_length {
-                ui.horizontal(|ui| {
-                    ui.label("Status:");
-                    ui.colored_label(egui::Color32::GREEN, format!("Sorted {} elements", length));
-                    
-                    // Show sort time if available
-                    if let Some(sort_time) = input_state.sort_time_ms {
-                        ui.horizontal(|ui| {
-                            ui.label("Sort time:");
-                            ui.label(format!("{:.2} ms", sort_time));
-                        });
-                    }
-                });
-            }
-            
+
             ui.add_space(10.0);
             ui.separator();
             ui.add_space(10.0);
-            
+
             ui.label("Array Length:");
-            
+
             // Input field for array length
             let mut input_value = input_state.input_value.clone();
             if input_value.is_empty() {
                 input_value = DEFAULT_RANDOM_KEYS_LEN.to_string();
             }
-            
+
             let response = ui.add(egui::TextEdit::singleline(&mut input_value)
                 .hint_text(DEFAULT_RANDOM_KEYS_LEN.to_string())
                 .desired_width(120.0));
-                
+
             if response.changed() {
                 // Filter out non-numeric characters
                 input_state.input_value = input_value
@@ -156,13 +135,28 @@ fn ui_system(
                     .filter(|c| c.is_ascii_digit())
                     .collect();
             }
-            
+
+            // Continuous Generation checkbox
+            ui.checkbox(&mut input_state.continuous_generation, "Continuous Generation");
+            if input_state.continuous_generation {
+                ui.label("Automatically generates and sorts new random kvs");
+
+                let length = if input_state.input_value.is_empty() {
+                    DEFAULT_RANDOM_KEYS_LEN
+                } else {
+                    input_state.input_value.parse().unwrap_or(DEFAULT_RANDOM_KEYS_LEN)
+                };
+
+                sort_events.send(SortEvent { length });
+            }
+
             ui.add_space(10.0);
-            
-            // Sort button
+
+            // Sort button (disabled if continuous generation is enabled)
             ui.horizontal(|ui| {
-                let button = ui.add_enabled(!input_state.is_sorting, egui::Button::new("Sort Data"));
-                
+                let button = ui.add_enabled(!input_state.continuous_generation,
+                                           egui::Button::new("Sort Data"));
+
                 if button.clicked() {
                     // Parse the input value, or use the default if empty or invalid
                     let length = if input_state.input_value.is_empty() {
@@ -170,21 +164,17 @@ fn ui_system(
                     } else {
                         input_state.input_value.parse().unwrap_or(DEFAULT_RANDOM_KEYS_LEN)
                     };
-                    
+
                     // Send a SortEvent when the button is pressed
                     sort_events.send(SortEvent { length });
                     input_state.last_sorted_length = Some(length);
-                    
+
                     info!("Sort button pressed, sorting {} elements", length);
                 }
-                
-                if input_state.is_sorting {
-                    ui.spinner();
-                }
             });
-            
+
             ui.add_space(5.0);
-            
+
             // Information about the sort
             ui.collapsing("About Radix Sort", |ui| {
                 ui.label("Radix sort is a non-comparative sorting algorithm that sorts data with integer keys by grouping keys by individual digits.");
