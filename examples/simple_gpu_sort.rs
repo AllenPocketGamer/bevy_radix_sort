@@ -1,6 +1,4 @@
 use bevy::{
-    color::palettes::css::RED,
-    core_pipeline::core_2d::graph::{Core2d, Node2d},
     prelude::*,
     render::{
         Extract, ExtractSchedule, Render, RenderApp, RenderSet,
@@ -13,6 +11,7 @@ use bevy::{
         storage::GpuShaderStorageBuffer,
     },
 };
+use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy_radix_sort::{
     EVE_GLOBAL_KEYS_STORAGE_BUFFER_HANDLE, EVE_GLOBAL_VALS_STORAGE_BUFFER_HANDLE,
     GetSubgroupSizePlugin, LoadState, RadixSortBindGroup, RadixSortPipeline, RadixSortPlugin,
@@ -23,17 +22,13 @@ use rand::Rng;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .add_plugins(EguiPlugin)
         .add_plugins(SimpleGpuSortPlugin {
             max_number_of_keys: 1024 * 1024,
         })
         .add_event::<SortEvent>()
         .run();
 }
-
-// Constants for button colors
-const NORMAL_BUTTON: Color = Color::srgb(0.15, 0.15, 0.15);
-const HOVERED_BUTTON: Color = Color::srgb(0.25, 0.25, 0.25);
-const PRESSED_BUTTON: Color = Color::srgb(0.35, 0.75, 0.35);
 
 // Default length of random keys to sort
 const DEFAULT_RANDOM_KEYS_LEN: usize = 256;
@@ -49,6 +44,14 @@ pub struct SortCommand {
     pub length: usize,
 }
 
+#[derive(Resource, Default)]
+pub struct InputState {
+    pub input_value: String,
+    pub last_sorted_length: Option<usize>,
+    pub is_sorting: bool,
+    pub sort_time_ms: Option<f32>,
+}
+
 #[derive(Debug)]
 pub struct SimpleGpuSortPlugin {
     pub max_number_of_keys: u32,
@@ -61,11 +64,8 @@ impl Plugin for SimpleGpuSortPlugin {
                 settings: self.max_number_of_keys.into(),
             })
             .init_resource::<SortCommand>()
-            .add_systems(Startup, setup_ui)
-            .add_systems(
-                Update,
-                (disable_requested, handle_sort_event, button_system).chain(),
-            );
+            .init_resource::<InputState>()
+            .add_systems(Update, (disable_requested, ui_system, handle_sort_event).chain());
 
         let render_app = app.sub_app_mut(RenderApp);
 
@@ -88,94 +88,110 @@ impl Plugin for SimpleGpuSortPlugin {
                 read_sorted_kvs_from_gpu_storage_bufs.after(RenderSet::Render),
             );
 
-        if let Some(core2d) = render_app
-            .world_mut()
-            .resource_mut::<RenderGraph>()
-            .get_sub_graph_mut(Core2d)
-        {
-            core2d.add_node(SimpleGpuSortNodeLabel, SimpleGpuSortNode::default());
-            core2d.add_node_edge(Node2d::EndMainPassPostProcessing, SimpleGpuSortNodeLabel);
-        }
+        let mut graph = render_app.world_mut().resource_mut::<RenderGraph>();
+        graph.add_node(SimpleGpuSortNodeLabel, SimpleGpuSortNode::default());
+        graph.add_node_edge(bevy::render::graph::CameraDriverLabel, SimpleGpuSortNodeLabel);
     }
 }
 
-// Setup UI system to create the button
-fn setup_ui(mut commands: Commands) {
-    // UI camera
-    commands.spawn(Camera2d);
-
-    // UI root node
-    commands
-        .spawn(Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            ..default()
-        })
-        .with_children(|parent| {
-            // Sort button
-            parent
-                .spawn((
-                    Button,
-                    Node {
-                        width: Val::Px(200.0),
-                        height: Val::Px(65.0),
-                        border: UiRect::all(Val::Px(5.0)),
-                        // horizontally center child text
-                        justify_content: JustifyContent::Center,
-                        // vertically center child text
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                    BorderColor(Color::BLACK),
-                    BackgroundColor(NORMAL_BUTTON),
-                ))
-                .with_child((
-                    Text::new("radix_sort"),
-                    TextFont {
-                        font_size: 30.0,
-                        ..default()
-                    },
-                    TextColor(Color::srgb(0.9, 0.9, 0.9)),
-                ));
-        });
-}
-
-// Button interaction system
-fn button_system(
-    mut interaction_query: Query<
-        (
-            &Interaction,
-            &mut BackgroundColor,
-            &mut BorderColor,
-            &Children,
-        ),
-        (Changed<Interaction>, With<Button>),
-    >,
+// Egui UI system
+fn ui_system(
+    mut contexts: EguiContexts,
+    mut input_state: ResMut<InputState>,
     mut sort_events: EventWriter<SortEvent>,
+    sort_command: Res<SortCommand>,
 ) {
-    for (interaction, mut color, mut border_color, _) in &mut interaction_query {
-        match *interaction {
-            Interaction::Pressed => {
-                *color = PRESSED_BUTTON.into();
-                border_color.0 = RED.into();
-
-                // Send a SortEvent when the button is pressed
-                sort_events.send(SortEvent {
-                    length: DEFAULT_RANDOM_KEYS_LEN,
+    // Update sorting status
+    input_state.is_sorting = sort_command.requested;
+    
+    egui::Window::new("Radix Sort Control")
+        .default_pos([100.0, 100.0])
+        .default_size([300.0, 250.0])
+        .show(contexts.ctx_mut(), |ui| {
+            ui.heading("Bevy Radix Sort");
+            
+            ui.add_space(10.0);
+            
+            // Status indicator
+            if input_state.is_sorting {
+                ui.horizontal(|ui| {
+                    ui.label("Status:");
+                    ui.colored_label(egui::Color32::YELLOW, "Sorting...");
+                });
+            } else if let Some(length) = input_state.last_sorted_length {
+                ui.horizontal(|ui| {
+                    ui.label("Status:");
+                    ui.colored_label(egui::Color32::GREEN, format!("Sorted {} elements", length));
+                    
+                    // Show sort time if available
+                    if let Some(sort_time) = input_state.sort_time_ms {
+                        ui.horizontal(|ui| {
+                            ui.label("Sort time:");
+                            ui.label(format!("{:.2} ms", sort_time));
+                        });
+                    }
                 });
             }
-            Interaction::Hovered => {
-                *color = HOVERED_BUTTON.into();
-                border_color.0 = Color::WHITE;
+            
+            ui.add_space(10.0);
+            ui.separator();
+            ui.add_space(10.0);
+            
+            ui.label("Array Length:");
+            
+            // Input field for array length
+            let mut input_value = input_state.input_value.clone();
+            if input_value.is_empty() {
+                input_value = DEFAULT_RANDOM_KEYS_LEN.to_string();
             }
-            Interaction::None => {
-                *color = NORMAL_BUTTON.into();
-                border_color.0 = Color::BLACK;
+            
+            let response = ui.add(egui::TextEdit::singleline(&mut input_value)
+                .hint_text(DEFAULT_RANDOM_KEYS_LEN.to_string())
+                .desired_width(120.0));
+                
+            if response.changed() {
+                // Filter out non-numeric characters
+                input_state.input_value = input_value
+                    .chars()
+                    .filter(|c| c.is_ascii_digit())
+                    .collect();
             }
-        }
-    }
+            
+            ui.add_space(10.0);
+            
+            // Sort button
+            ui.horizontal(|ui| {
+                let button = ui.add_enabled(!input_state.is_sorting, egui::Button::new("Sort Data"));
+                
+                if button.clicked() {
+                    // Parse the input value, or use the default if empty or invalid
+                    let length = if input_state.input_value.is_empty() {
+                        DEFAULT_RANDOM_KEYS_LEN
+                    } else {
+                        input_state.input_value.parse().unwrap_or(DEFAULT_RANDOM_KEYS_LEN)
+                    };
+                    
+                    // Send a SortEvent when the button is pressed
+                    sort_events.send(SortEvent { length });
+                    input_state.last_sorted_length = Some(length);
+                    
+                    info!("Sort button pressed, sorting {} elements", length);
+                }
+                
+                if input_state.is_sorting {
+                    ui.spinner();
+                }
+            });
+            
+            ui.add_space(5.0);
+            
+            // Information about the sort
+            ui.collapsing("About Radix Sort", |ui| {
+                ui.label("Radix sort is a non-comparative sorting algorithm that sorts data with integer keys by grouping keys by individual digits.");
+                ui.label("This implementation uses the GPU to perform the sort, making it very fast for large arrays.");
+                ui.label("The maximum array size is determined by the GPU memory.");
+            });
+        });
 }
 
 fn disable_requested(mut sort_command: ResMut<SortCommand>) {
@@ -190,8 +206,6 @@ fn handle_sort_event(mut events: EventReader<SortEvent>, mut sort_command: ResMu
 }
 
 fn extract_sort_command(mut commands: Commands, sort_command: Extract<Res<SortCommand>>) {
-    if sort_command.requested {}
-
     commands.insert_resource(SortCommand {
         requested: sort_command.requested,
         length: sort_command.length,
