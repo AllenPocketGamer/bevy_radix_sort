@@ -30,7 +30,7 @@ impl Plugin for GetSubgroupSizePlugin {
         let get_subgroup_size_utils = GetSubgroupSizeUtils::new(render_device);
         let subgroup_size = get_subgroup_size_utils.get_subgroup_size(render_device, render_queue);
 
-        log::info!("subgroup_size: {}", subgroup_size.deref());
+        info!("subgroup_size: {}", subgroup_size.deref());
 
         render_app.insert_resource(subgroup_size);
         app.insert_resource(subgroup_size);
