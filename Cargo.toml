@@ -15,7 +15,7 @@ bytemuck = { version = "1.7.0", features = ["derive"] }
 [dev-dependencies]
 rand = "0.8"
 bevy_egui = "0.31"
-log = { version = "*", features = ["max_level_debug", "release_max_level_warn"] }
+log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
 
 [features]
 default = []
