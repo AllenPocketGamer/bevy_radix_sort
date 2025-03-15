@@ -1,6 +1,6 @@
 [package]
 name = "bevy_radix_sort"
-version = "0.1.0"
+version = "0.15.0"
 edition = "2024"
 authors = ["AllenPocketGamer <allenpocketwork@gmail.com>"]
 description = "A GPU-based radix sort plugin for Bevy"
