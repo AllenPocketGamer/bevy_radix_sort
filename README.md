@@ -46,23 +46,29 @@ These tools provide detailed insights into GPU execution times, memory usage, an
 
 Below are benchmark results from testing on an NVIDIA RTX 4070 Ti Super:
 
-- __10k kvs__
-![bench_10k_4070ts](./bench_10k_4070ts.png)
-- __100k kvs__
-![bench_100k_4070ts](./bench_100k_4070ts.png)
-- __1000k kvs__
-![bench_1000k_4070ts](./bench_1000k_4070ts.png)
-- __10000k kvs__
-![bench_10000k_4070ts](./bench_10000k_4070ts.png)
+- **10k kvs**
+  ![bench_10k_4070ts](./bench_10k_4070ts.png)
+- **100k kvs**
+  ![bench_100k_4070ts](./bench_100k_4070ts.png)
+- **1000k kvs**
+  ![bench_1000k_4070ts](./bench_1000k_4070ts.png)
+- **10000k kvs**
+  ![bench_10000k_4070ts](./bench_10000k_4070ts.png)
 
 | Number of Key-Value Pairs | Execution Time (ms) |
-|---------------------------|---------------------|
+| ------------------------- | ------------------- |
 | 10,000                    | 0.12                |
 | 100,000                   | 0.19                |
 | 1,000,000                 | 0.43                |
 | 10,000,000                | 2.10                |
 
-*Note: Performance may vary based on system configuration, driver version, and concurrent GPU workloads.*
+_Note: Performance may vary based on system configuration, driver version, and concurrent GPU workloads._
+
+## Compatible Bevy versions
+
+| bevy_radix_sort | bevy |
+| --------------- | ---- |
+| 0.15            | 0.15 |
 
 ## Usage
 
@@ -76,7 +82,7 @@ Contributions are welcome! Feel free to submit issues or pull requests on our [G
 
 Licensed under either of
 
- * Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
