@@ -46,14 +46,21 @@ These tools provide detailed insights into GPU execution times, memory usage, an
 
 Below are benchmark results from testing on an NVIDIA RTX 4070 Ti Super:
 
-![RTX 4070 Ti Super Benchmark](./benchmark.png)
+- __10k kvs__
+![bench_10k_4070ts](./bench_10k_4070ts.png)
+- __100k kvs__
+![bench_100k_4070ts](./bench_100k_4070ts.png)
+- __1000k kvs__
+![bench_1000k_4070ts](./bench_1000k_4070ts.png)
+- __10000k kvs__
+![bench_10000k_4070ts](./bench_10000k_4070ts.png)
 
 | Number of Key-Value Pairs | Execution Time (ms) |
 |---------------------------|---------------------|
 | 10,000                    | 0.12                |
 | 100,000                   | 0.19                |
 | 1,000,000                 | 0.43                |
-| 10,000,000                | 2.30                |
+| 10,000,000                | 2.10                |
 
 *Note: Performance may vary based on system configuration, driver version, and concurrent GPU workloads.*
 
