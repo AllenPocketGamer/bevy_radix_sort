@@ -70,9 +70,13 @@ _Note: Performance may vary based on system configuration, driver version, and c
 | --------------- | ---- |
 | 0.15            | 0.15 |
 
-## Usage
+## Usages
 
 Check out the [example implementation](./examples/simple_gpu_sort.rs) to see how to integrate the radix sort into your Bevy application.
+
+### Real-world Applications
+
+- **[Bevy Millions Ball](https://github.com/AllenPocketGamer/bevy_millions_ball)**: A high-performance collision detection system capable of simulating millions of spheres in real-time. This project uses `bevy_radix_sort` as its core algorithm for spatial partitioning and efficient collision detection, demonstrating the plugin's effectiveness in large-scale physics simulations.
 
 ## Contributing
 
